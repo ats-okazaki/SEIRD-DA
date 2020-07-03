@@ -89,10 +89,11 @@ def update(xin,dx) :
     nE2R = dx[2]
     nI2R = dx[3]
     nD   = dx[4]
-    nE   = min(nE, Sin)
-    nI   = min(nI, Ein)
-    nI2R = min(nI2R, Iin)
-    nD   = min(nD, Iin)
+    nE   = max(min(nE, Sin), 0)
+    nI   = max(min(nI, Ein), 0)
+    nE2R = max(min(nE2R, Ein), 0)
+    nI2R = max(min(nI2R, Iin), 0)
+    nD   = max(min(nD, Iin), 0)
     Sout = Sin - nE
     Eout = Ein + nE - nI - nE2R
     Iout = Iin + nI - nI2R - nD
@@ -102,11 +103,11 @@ def update(xin,dx) :
     #
     # update 
     #
-    xout = np.array(xin)
-    xout[0] = Sout
-    xout[1] = Eout
-    xout[2] = Iout
-    xout[3] = Rout
-    xout[4] = Dout
-    xout[5] = Nout
+    xout = np.empty(np.shape(xin))
+    xout[0] = max(Sout,0.)
+    xout[1] = max(Eout,0.)
+    xout[2] = max(Iout,0.)
+    xout[3] = max(Rout,0.)
+    xout[4] = max(Dout,0.)
+    xout[5] = max(Nout,0.)
     return (xout)

@@ -23,8 +23,22 @@ def LETKF (xin,Y,yo) :
             yo_l [j]     = yo[j]
             HX_l [j]     = HX[j]
             dY_l [j,:]   = dY[j,:]
-            R_inv[j,j] = 1. / (par.errobs * par.errobs)
+            R_inv[j,j] = 1. / min(yo[j] * yo[j] * 0.01 + 10., par.errobs[j] * par.errobs[j])
+            #R_inv[j,j] = 1. / (par.errobs[j] * par.errobs[j])
 
+        inov = yo_l - HX_l
+
+        ## quality control and gross error check
+        #for j in range(0,par.nobs) :
+        #    if yo_l[j] < 0 :
+        #        inov[j] = 0.
+            #if inov[j] > np.std(Y[j,:],ddof=1) * par.grossErr[j] :
+            #    inov[j] = 0.
+            #    print(j,' obs skipped for ',i)
+
+        # variable loc
+        inov = inov * par.varLoc[i]
+            
         # Eigen decomposition
         Pa_tilda = (par.kmax-1.)*np.identity(par.kmax,dtype=float) + np.dot(np.dot(dY_l.T,R_inv),dY_l)
         la, V = np.linalg.eig(Pa_tilda)
@@ -35,7 +49,7 @@ def LETKF (xin,Y,yo) :
             D[k,k] = 1./la[k]   # inv D
         Pa_tilda = np.dot(np.dot(V,D),V.T)
         K = np.dot(np.dot(np.dot(dXf_l,Pa_tilda),dY_l.T),R_inv)
-        Xam_l = Xfm_l + np.dot(K,yo_l-HX_l)
+        Xam_l = Xfm_l + np.dot(K,inov)
 
         # Ensemble update
         D = np.zeros((par.kmax,par.kmax),dtype=float)
@@ -134,7 +148,8 @@ def ensinit (N) :
     # delta
     if par.prtrbParam[3] :
         for k in range(par.kmax) :
-            pa[3,k] = np.random.triangular(par.deathRat[0],par.deathRat[1],par.deathRat[2]) / np.random.triangular(par.infectPeriod[0],par.infectPeriod[1],par.infectPeriod[2])
+            pa[3,k] = np.random.triangular(par.deathRat[0],par.deathRat[1],par.deathRat[2]) / par.infectPeriod[1]
+            #pa[3,k] = np.random.triangular(par.deathRat[0],par.deathRat[1],par.deathRat[2]) / np.random.triangular(par.infectPeriod[0],par.infectPeriod[1],par.infectPeriod[2])
             #while True :
             #    rn = np.random.randn() * par.varParam[3]
             #    if par.param[3] + rn >= 0. :
@@ -159,12 +174,14 @@ def ensinit (N) :
 def arctransParam(pat) :
     pa = np.array(pat)
     pa[1,:] = np.exp( pat[1,:] )
+    #pa[3,:] = np.exp( pat[3,:] )
     pa[3,:] = np.tanh( pat[3,:] * np.pi - 1. ) * 0.5 + 0.5
     return ( pa )
 #-------------------------------------------------------
 def transParam( pa ) :
     pat = np.array(pa)
     pat[1,:] = np.log(pa[1,:])
+    #pat[3,:] = np.log(pa[3,:])
     pat[3,:] =  ( np.arctanh((pa[3,:] - 0.5 ) * 2) + 1. ) / np.pi
     return ( pat )
 #-------------------------------------------------------
@@ -176,7 +193,8 @@ def ensfcst (xin,pa) :
     return (xout,dx)
 #-------------------------------------------------------
 def ensupdate (xin,dx) :
-    xout = np.array(xin)
+    #xout = np.array(xin)
+    xout = np.zeros(np.shape(xin))
     for k in range(par.kmax) :
         xout[:,k] = seird.update(xin[:,k],dx[:,k])
     return (xout)
